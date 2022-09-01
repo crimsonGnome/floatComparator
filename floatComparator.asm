@@ -44,251 +44,207 @@
 ;  algorithm used in the isfloat function than a direct reading of the source code of the function.
 
 ;========= Begin source code ====================================================================================
-;Declaration area
-
-global isfloat
-
-null equ 0
-true equ -1
-false equ 0
+extern printf
+extern scanf
+global perimeter
 
 segment .data
-   ;This segment is empty
+welcome db "Welcome to a friendly assembly program by Johnson Tong",10,0
+welcome2 db "This program will compute the perimeter and the average side length of a rectangle.", 10, 0
+
+input1prompt db "Enter the height: ",0
+input2prompt db "Enter the width: ", 0
+
+one_float_format db "%lf",0
+three_float_format db "%lf %lf %lf", 0
+
+output_perimeter_float db "The perimeter is %.15lf.",10,0
+output_average_float db "The length of the average side is %.15lf.", 10, 0
+
+goodbye db "I hope you enjoyed your rectangle.",10,0
+goodbye2 db "The assembly program will send the perimeter to the main function.", 10,0
+one_string_format db "%s", 0
+
+welcome_output db "Good morning %s", 10,0
+
+four dq 4.0
 
 segment .bss
-   ;This segment is empty
 
 segment .text
-isfloat:
 
-;Block that backs up almost all GPRs
-;Back up the general purpose registers for the sole purpose of protecting the data of the caller.
-push rbp                                          ;Backup rbp
-mov  rbp,rsp                                      ;The base pointer now points to top of stack
-push rdi                                          ;Backup rdi
-push rsi                                          ;Backup rsi
-push rdx                                          ;Backup rdx
-push rcx                                          ;Backup rcx
-push r8                                           ;Backup r8
-push r9                                           ;Backup r9
-push r10                                          ;Backup r10
-push r11                                          ;Backup r11
-push r12                                          ;Backup r12
-push r13                                          ;Backup r13
-push r14                                          ;Backup r14
-push r15                                          ;Backup r15
-push rbx                                          ;Backup rbx
-pushf                                             ;Backup rflags
+perimeter:
+;Prolog ===== Insurance for any caller of this assembly module ========================================================
+;Any future program calling this module that the data in the caller's GPRs will not be modified.
+push rbp
+mov  rbp,rsp
+push rdi                                                    ;Backup rdi
+push rsi                                                    ;Backup rsi
+push rdx                                                    ;Backup rdx
+push rcx                                                    ;Backup rcx
+push r8                                                     ;Backup r8
+push r9                                                     ;Backup r9
+push r10                                                    ;Backup r10
+push r11                                                    ;Backup r11
+push r12                                                    ;Backup r12
+push r13                                                    ;Backup r13
+push r14                                                    ;Backup r14
+push r15                                                    ;Backup r15
+push rbx                                                    ;Backup rbx
+pushf                                                       ;Backup rflags
 
+;Registers rax, rip, and rsp are usually not backed up.
+push qword 0
+; Display the welcome messages
+mov rax, 0                  ;printf uses no data from xmm registers
+mov rdi, welcome            ;"Welcome to a friendly assembly program by Johnson Tong"
+call printf
 
-;Make a copy of the passed in array of ascii values
-mov r13, rdi                                      ;r13 is the array of char
+push qword 0
 
-;Let r14 be an index of the array r13.  Initialize to integer 0
-xor r14, r14
+sub rsp, 1024 ; make space for 1 string
+mov rax, 0
+mov rdi, one_string_format
+mov rsi, rsp
+mov rdx, rsp
+add rdx, 1024
+call scanf
 
-;Check for leading plus or minus signs
-cmp byte [r13],'+'
-je increment_index
-cmp byte[r13],'-'
-jne continue_validation
-increment_index:
-inc r14
+mov rax, 0
+mov rdi, welcome_output
+mov rsi, rsp
+call printf
 
-continue_validation:
+add rsp, 1024
+pop rax
 
-;Block: loop to validate chars before the decimal point
-loop_before_point:
-   mov rax,0
-   xor rdi,rdi                ;Zero out rdi
-   mov dil,byte [r13+1*r14]   ;dil is the low byte in the register rdi; reference Jorgensen, p. 10
-   call is_digit
-   cmp rax,false
-   je is_it_radix_point
-   inc r14
-   jmp loop_before_point
-;End of loop checking chars before the point is encountered.
+push qword 0
+mov rax, 0
+mov rdi, welcome2
+call printf
+pop rax
 
-is_it_radix_point:
+    ; push qword 0 ; just pretend this isn't here
+	
+	push qword 0 ; push 8 bytes to top of stack for storage
+	push qword 0
+	push qword 0
+	
+	mov rdi, three_float_format ; move float format into first parameter register // rdi = "%lf %lf %lf"
+	mov rsi, rsp ; <- second arg register now points to top of stack
+	mov rdx, rsp
+	add rdx, qword 8 ; rdx points to second qword
+	mov rcx, rsp
+	add rcx, qword 16 ; rcx points to third qword
+	call scanf ; scanf("%lf %lf %lf", rsp, rsp + 8, rsp + 16);
+	
+	movsd xmm15, [rsp+0] ; dereference the data at the top of stack, store in xmm15 
+	movsd xmm14, [rsp+8]
+	movsd xmm13, [rsp+16]
+	
+	; [ ] are equivalent to *dereference in c++
+	
+	pop rax ; restore stack, i.e. since we're done with the 8 bytes at the top, remove them
+	
+	; for the actual numbers
+	pop rax
+	pop rax 
+	; pop rax
 
-;Is the next value of the array a genuine radix point?
-cmp byte[r13+1*r14],'.'
-    jne return_false
+;=========begin inputs for height and width===================
+push qword 0
+;Display a prompt message asking for inputs
+mov rax, 0
+mov rdi, input1prompt         ;"Enter the height: "
+call printf
+pop rax
 
-;A point has been found, therefore, begin a loop to process remaining digits.
-start_loop_after_finding_a_point:
-    inc r14
-    mov rax,0
-    xor rdi,rdi
-    mov dil,byte[r13+1*r14]
-    call is_digit
-    cmp rax,false
-    jne start_loop_after_finding_a_point
-;End of loop processing valid digits after passing the one decimal point.
+;Begin the scanf block
+push qword 0
+mov rax, 1
+mov rdi, one_float_format
+mov rsi, rsp
+call scanf
+movsd xmm10, [rsp]
+pop rax
 
-;Something other than a digit has been found.  
-;It should be null at the end of the string.
-cmp byte [r13+1*r14],null
-jne return_false
-mov rax,true
-jmp restore_gpr_registers
-    
-return_false:
-mov rax,false
+push qword 0
+;Display a prompt message asking for inputs
+mov rax, 0
+mov rdi, input2prompt       ; "Enter the width: "
+call printf
+pop rax
 
-restore_gpr_registers:
-popf                                    ;Restore rflags
-pop rbx                                 ;Restore rbx
-pop r15                                 ;Restore r15
-pop r14                                 ;Restore r14
-pop r13                                 ;Restore r13
-pop r12                                 ;Restore r12
-pop r11                                 ;Restore r11
-pop r10                                 ;Restore r10
-pop r9                                  ;Restore r9
-pop r8                                  ;Restore r8
-pop rcx                                 ;Restore rcx
-pop rdx                                 ;Restore rdx
-pop rsi                                 ;Restore rsi
-pop rdi                                 ;Restore rdi
-pop rbp                                 ;Restore rbp
-
-ret                                     ;Pop the integer stack and jump to the address represented by the popped value.
-
-
-
-
-
-
-
-
-
-
-
-;========= Begin function is_digit ==================================================================================
-
-;****************************************************************************************************************************
-;Program name: "is_digit".  This a library function contained in a single file.  The function receives a char parameter.  It*
-;returns true if that parameter is the ascii value of a decimal digit and returns false in all other cases.                  *
-;Copyright (C) 2022 Joseph Eggers.                                                                                         *
-;                                                                                                                           *
-;This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public   *
-;License version 3 as published by the Free Software Foundation.  This program is distributed in the hope that it will be   *
-;useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.*
-;See the GNU Lesser General Public License for more details. A copy of the GNU General Public License v3 is available here: *
-;<https:;www.gnu.org/licenses/>.                                                                                            *
-;****************************************************************************************************************************
-;
-;
-;========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1=========2=========3**
-;Author information
-;  Author name: Joseph Eggers
-;  Author email: joseph.eggers@csu.fullerton.edu
-;  Author CWID: 885939488
-;
-;Status
-;  This software is not an application program, but rather it is a single function licensed for use by other applications.
-;  This function can be embedded within both FOSS programs and in proprietary programs as permitted by the LGPL.
-
-;Function information
-;  Function name: is_digit
-;  Name selection.  This function is named is_digit to avoid confusion with an existing library function named isdigit.
-;  Programming language: X86 assembly in Intel syntax.
-;  Date development began:  2022-Feb-28
-;  Date version 1.0 finished: 2022-Feb 28
-;  Files of this function: currently is_digit is an auxillary function of isfloat, and as such does not occupy its own file.
-;  System requirements: an X86 platform with nasm installed or other compatible assembler.
-;  Known issues: none
-;  Assembler used for testing: Nasm version 2.14.02
-;  Prototype: bool is_digit(char);
-;
-;Purpose
-;  This function wil accept a single char as input parameter and determine if that parameter represents a decimal digit. 
-;
-;Translation information if this function occupied its own file.  Currently the function is_digit resides in the same 
-;same file as isfloat and therefore, will be assembled when isfloat is assembled.
-;  Assemble: nasm -f elf64 -l is_digit.lis -o is_digit.o is_digit.asm
-;
-;Software design document:
-;  An Execution flow chart accompanies this function.  That document will provide a better understanding of the 
-;  algorithm used in the isfloat function than a direct reading of the source code of the function.
-
-;========= Begin source code ====================================================================================
-;Declaration area
-true equ -1
-false equ 0
-ascii_value_of_zero equ 0x30
-ascii_value_of_nine equ 0x39
-
-segment .data
-   ;This segment is empty
-
-segment .bss
-   ;This segment is empty
-
-segment .text
-is_digit:
-
-;Block that backs up almost all GPRs
-;Back up the general purpose registers for the sole purpose of protecting the data of the caller.
-push rbp                                          ;Backup rbp
-mov  rbp,rsp                                      ;The base pointer now points to top of stack
-push rdi                                          ;Backup rdi
-push rsi                                          ;Backup rsi
-push rdx                                          ;Backup rdx
-push rcx                                          ;Backup rcx
-push r8                                           ;Backup r8
-push r9                                           ;Backup r9
-push r10                                          ;Backup r10
-push r11                                          ;Backup r11
-push r12                                          ;Backup r12
-push r13                                          ;Backup r13
-push r14                                          ;Backup r14
-push r15                                          ;Backup r15
-push rbx                                          ;Backup rbx
-pushf                                             ;Backup rflags
-
-;Make a copy of the passed in array of ascii values.
-;Note that only the low one-byte of rdi is important for this function is_digit.
-;Nevertheless, we copy the entire 8-byte register.
-mov r13,0
-mov r13b,dil     ;Copy the low byte of rdi to the low byte of r13.  The other bytes of rdi are all zeros.
-
-;Block to test if value in r13 >= ascii(0)
-cmp r13,ascii_value_of_zero
-jl is_digit.return_false
-
-;Block to test if value in r13 <= ascii(9)
-cmp r13,ascii_value_of_nine
-jg is_digit.return_false
-
-;Return true
-xor rax,rax  ;Set rax to zero
-mov rax,true
-jmp is_digit.restore_gpr_registers
-
-is_digit.return_false:
-xor rax,rax  ;Set rax to zero
-mov rax,false
-
-is_digit.restore_gpr_registers:
-;Restore all general purpose registers to their original values
-popf                                    ;Restore rflags
-pop rbx                                 ;Restore rbx
-pop r15                                 ;Restore r15
-pop r14                                 ;Restore r14
-pop r13                                 ;Restore r13
-pop r12                                 ;Restore r12
-pop r11                                 ;Restore r11
-pop r10                                 ;Restore r10
-pop r9                                  ;Restore r9
-pop r8                                  ;Restore r8
-pop rcx                                 ;Restore rcx
-pop rdx                                 ;Restore rdx
-pop rsi                                 ;Restore rsi
-pop rdi                                 ;Restore rdi
-pop rbp                                 ;Restore rbp
-
-ret                                     ;Pop the integer stack and jump to the address represented by the popped value.
+;Begin the scanf block
+push qword 0
+mov rax, 1
+mov rdi, one_float_format
+mov rsi, rsp
+call scanf
+movsd xmm11, [rsp]
+pop rax
 
 
+
+;=================Calculate perimeter=====================
+movsd xmm12, xmm10             ; preserve the height
+movsd xmm13, xmm11             ; preserve the width
+addsd xmm12, xmm11
+addsd xmm13, xmm10
+addsd xmm12, xmm13
+
+push qword 0
+mov rax, 1
+movsd xmm0, xmm12
+mov rdi, output_perimeter_float    ;"The perimeter is %.3lf."
+call printf
+pop rax
+
+movsd xmm15, xmm12                  ;save the perimeter before modifying
+;=================Calculate average=======================
+; two alternative ways to do the average
+divsd xmm12, [four]
+; mov r8, 4
+; cvtsi2sd xmm13, r8
+; divsd xmm12, xmm13
+
+push qword 0
+mov rax, 1
+movsd xmm0, xmm12
+mov rdi, output_average_float     ;"The length of the average side is %.3lf"
+call printf
+pop rax
+
+push qword 0
+mov rax, 0
+mov rdi, goodbye       ; "I hope you enjoyed your rectangle."
+call printf
+pop rax
+
+push qword 0
+mov rax, 0
+mov rdi, goodbye2       ; "The assembly program will send the perimeter to the main function."
+call printf
+pop rax
+
+pop rax
+
+movsd xmm0, xmm15
+;===== Restore original values to integer registers ===================================================================
+popf                                                        ;Restore rflags
+pop rbx                                                     ;Restore rbx
+pop r15                                                     ;Restore r15
+pop r14                                                     ;Restore r14
+pop r13                                                     ;Restore r13
+pop r12                                                     ;Restore r12
+pop r11                                                     ;Restore r11
+pop r10                                                     ;Restore r10
+pop r9                                                      ;Restore r9
+pop r8                                                      ;Restore r8
+pop rcx                                                     ;Restore rcx
+pop rdx                                                     ;Restore rdx
+pop rsi                                                     ;Restore rsi
+pop rdi                                                     ;Restore rdi
+pop rbp                                                     ;Restore rbp
+
+ret
