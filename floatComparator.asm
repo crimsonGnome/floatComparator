@@ -46,34 +46,25 @@
 ;========= Begin source code ====================================================================================
 extern printf
 extern scanf
-global perimeter
+extern atof
+extern isFloat
+global comparator
 
 segment .data
-welcome db "Welcome to a friendly assembly program by Johnson Tong",10,0
-welcome2 db "This program will compute the perimeter and the average side length of a rectangle.", 10, 0
+initiate db "Please enter two float numbers seperated by white space. Press enter after the second input.",10,0
+confirmationNumbers db `These are the numbers were entered \n %1.16f \n %1.16f`,10,0
+invalid db "The number you entered is not valid. Please try again", 10, 0
+larger db "The larger number is %1.16f", 10, 0
+endingMSG db `This assembly modlue will now return execution to the driver \module. \n The small number will be returned to the driver. `, 10, 0
+neg_1: dq 0xFF0000000000000
 
-input1prompt db "Enter the height: ",0
-input2prompt db "Enter the width: ", 0
-
-one_float_format db "%lf",0
-three_float_format db "%lf %lf %lf", 0
-
-output_perimeter_float db "The perimeter is %.15lf.",10,0
-output_average_float db "The length of the average side is %.15lf.", 10, 0
-
-goodbye db "I hope you enjoyed your rectangle.",10,0
-goodbye2 db "The assembly program will send the perimeter to the main function.", 10,0
-one_string_format db "%s", 0
-
-welcome_output db "Good morning %s", 10,0
-
-four dq 4.0
+userInput db "%s%s", 0
 
 segment .bss
 
 segment .text
 
-perimeter:
+comparator:
 ;Prolog ===== Insurance for any caller of this assembly module ========================================================
 ;Any future program calling this module that the data in the caller's GPRs will not be modified.
 push rbp
@@ -95,141 +86,114 @@ pushf                                                       ;Backup rflags
 
 ;Registers rax, rip, and rsp are usually not backed up.
 push qword 0
-; Display the welcome messages
-mov rax, 0                  ;printf uses no data from xmm registers
-mov rdi, welcome            ;"Welcome to a friendly assembly program by Johnson Tong"
-call printf
-
+;====== Intiate progam ======
 push qword 0
+; Display the iniate input messages
+mov rax, 0                  ;printf uses no data from xmm registers (expecting strings)
+mov rdi, initiate            ;"Please enter two float numbers seperated by white space. Press enter after the second input"
+call printf
+pop rax
 
-sub rsp, 1024 ; make space for 1 string
+push qword -1
+;====== Take 1st float ======
+
+sub rsp, 2048 ; make space for 1 string
 mov rax, 0
-mov rdi, one_string_format
+mov rdi, userInput
 mov rsi, rsp
 mov rdx, rsp
 add rdx, 1024
 call scanf
 
+;====== Check if the input is a valid float ======
 mov rax, 0
-mov rdi, welcome_output
-mov rsi, rsp
-call printf
+mov rdi, rsp
+call isFloat
+cmp rax, 0
 
-add rsp, 1024
-pop rax
-
-push qword 0
+je invalidRoot
 mov rax, 0
-mov rdi, welcome2
-call printf
+mov rdi, rsp
+add rdi, 1024
+call isFloat
+cmp rax, 0
+je invalidRoot
+
+; if Both Passed then convert to floats
+mov rdi, rsp
+call atof
+movsd xmm15, xmm0
+mov rdi, rsp
+add rdi, 1024
+call atof
+movsd xmm14, xmm0
 pop rax
 
-    ; push qword 0 ; just pretend this isn't here
-	
-	push qword 0 ; push 8 bytes to top of stack for storage
-	push qword 0
-	push qword 0
-	
-	mov rdi, three_float_format ; move float format into first parameter register // rdi = "%lf %lf %lf"
-	mov rsi, rsp ; <- second arg register now points to top of stack
-	mov rdx, rsp
-	add rdx, qword 8 ; rdx points to second qword
-	mov rcx, rsp
-	add rcx, qword 16 ; rcx points to third qword
-	call scanf ; scanf("%lf %lf %lf", rsp, rsp + 8, rsp + 16);
-	
-	movsd xmm15, [rsp+0] ; dereference the data at the top of stack, store in xmm15 
-	movsd xmm14, [rsp+8]
-	movsd xmm13, [rsp+16]
-	
-	; [ ] are equivalent to *dereference in c++
-	
-	pop rax ; restore stack, i.e. since we're done with the 8 bytes at the top, remove them
-	
-	; for the actual numbers
-	pop rax
-	pop rax 
-	; pop rax
-
-;=========begin inputs for height and width===================
-push qword 0
-;Display a prompt message asking for inputs
-mov rax, 0
-mov rdi, input1prompt         ;"Enter the height: "
-call printf
-pop rax
-
-;Begin the scanf block
-push qword 0
-mov rax, 1
-mov rdi, one_float_format
-mov rsi, rsp
-call scanf
-movsd xmm10, [rsp]
-pop rax
+;==== End of input numbers =====
+; Print confirmation of numbers 
 
 push qword 0
-;Display a prompt message asking for inputs
-mov rax, 0
-mov rdi, input2prompt       ; "Enter the width: "
-call printf
-pop rax
-
-;Begin the scanf block
-push qword 0
-mov rax, 1
-mov rdi, one_float_format
-mov rsi, rsp
-call scanf
-movsd xmm11, [rsp]
-pop rax
-
-
-
-;=================Calculate perimeter=====================
-movsd xmm12, xmm10             ; preserve the height
-movsd xmm13, xmm11             ; preserve the width
-addsd xmm12, xmm11
-addsd xmm13, xmm10
-addsd xmm12, xmm13
-
-push qword 0
-mov rax, 1
-movsd xmm0, xmm12
-mov rdi, output_perimeter_float    ;"The perimeter is %.3lf."
-call printf
-pop rax
-
-movsd xmm15, xmm12                  ;save the perimeter before modifying
-;=================Calculate average=======================
-; two alternative ways to do the average
-divsd xmm12, [four]
-; mov r8, 4
-; cvtsi2sd xmm13, r8
-; divsd xmm12, xmm13
-
-push qword 0
-mov rax, 1
-movsd xmm0, xmm12
-mov rdi, output_average_float     ;"The length of the average side is %.3lf"
-call printf
-pop rax
-
-push qword 0
-mov rax, 0
-mov rdi, goodbye       ; "I hope you enjoyed your rectangle."
-call printf
-pop rax
-
-push qword 0
-mov rax, 0
-mov rdi, goodbye2       ; "The assembly program will send the perimeter to the main function."
-call printf
-pop rax
-
-pop rax
-
+; Display the iniate input messages
+mov rax, 2                  ;printf uses no data from xmm registers (expecting strings)
+mov rdi, confirmationNumbers           ;"Please enter two float numbers seperated by white space. Press enter after the second input"
 movsd xmm0, xmm15
+movsd xmm1, xmm14
+call printf
+pop rax
+
+;====== Compare the two floats ======
+
+ucomisd xmm14, xmm15
+
+jb inputOneBigger
+
+movsd xmm9, xmm14
+movsd xmm8, xmm15
+jmp returnBigger
+
+inputOneBigger:
+movsd xmm9, xmm15
+movsd xmm8, xmm14
+
+returnBigger:
+;====== Return the bigger number ======= 
+push qword 0
+mov rax, 1
+mov rdi, larger
+movsd xmm0, xmm9
+call printf
+pop rax;
+;====== Return the smaller number ======= 
+
+jmp end
+
+invalidRoot: 
+	push qword 0
+	mov rax, 0
+	mov rdi, invalid
+	call printf
+	pop rax
+	;==== return -1 ======
+	push qword 0
+	mov rax, -1
+	cvtsi2sd xmm8, rax
+	pop rax
+	pop rax
+	jmp end
+
+end:
+push qword 0
+mov rax, 0
+mov rdi, endingMSG
+call printf
+pop rax
+
+pop rax
+movsd xmm0, xmm8
+
+add rsp, 2048
+
+
 ;===== Restore original values to integer registers ===================================================================
 popf                                                        ;Restore rflags
 pop rbx                                                     ;Restore rbx

@@ -1,9 +1,9 @@
 //****************************************************************************************************************************
-//Program name: "Float Comparator". This program takes in two float numbers as inputs to determine whether or not they fit the
+//Program name: "Quadratic". This program takes in a single float number as coefficients to determine whether or not they fit the
 //criteria for a quadratic equation. It will calculate the discriminant and validate input to find roots or let the user know
 //there is no root. Copyright (C) 2022 Joseph Eggers.
 //                                                                                                                           *
-//This file is part of the software program "Float Comparator".                                                                   *
+//This file is part of the software program "Quadratic".                                                                   *
 //Quadratic is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License   *
 //version 3 as published by the Free Software Foundation.                                                                    *
 //Quadratic is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied          *
@@ -31,10 +31,10 @@
 //  in the assembly file quadratic.asm.
 //
 //This file
-//   File name: isfloat.cpp
+//   File name: isFloat.cpp
 //   Language: C++
 //   Max page width: 132 columns
-//   Compile: g++ -c -Wall -no-pie -m64 -std=c++17 -o isFloat.o isfloat.cpp
+//   Compile: g++ -c -Wall -no-pie -m64 -std=c++17 -o isFloat.o isFloat.cpp
 //   Link: g++ -m64 -no-pie -o finalQuadratic.out quadratic.o quad.o isFloat.o second_degree.o -std=c++17
 //   Optimal print specification: 132 columns width, 7 points, monospace, 8½x11 paper
 //
@@ -44,24 +44,21 @@
 //===== Begin code area ===========================================================================================================
 
 #include <iostream>
-#include <iomanip>
 
-extern "C" double comparator();
+extern "C" bool isFloat(char [ ]);
 
-using std::cin, std::cout, std::endl;
-
-int main()
-{
-    cout << "Welcome to Floating Points Numbers programmed by Joseph Eggers.\n"
-         << "Mr. Eggers has been working for the Longstreet Software Company for"
-         << " the last two years.\n Please enter two float numbers separated by white"
-         << " space. Press enter after the second input.\n\n";
-
-    //x86 program
-    double lower = comparator();
-
-    cout << "The driver module received this float number " << std::showpoint << lower << " and will keep it.\n"
-         << "The driver module will return integer 0 to the operating system.\n"
-         << "Have a nice day. Good-bye.";
-     return 0;
+bool isFloat(char w[ ])
+{   bool result = true;
+    bool onepoint = false;
+    int start = 0;
+    if (w[0] == '-' || w[0] == '+') start = 1;
+    unsigned long int k = start;
+    while (!(w[k] == '\0') && result )
+    {    if (w[k] == '.' && !onepoint)
+               onepoint = true;
+         else
+               result = result && isdigit(w[k]) ;
+         k++;
+     }
+     return result && onepoint;
 }
