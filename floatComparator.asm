@@ -1,28 +1,31 @@
 ;****************************************************************************************************************************
-;Program name: "isfloat".  This a library function contained in a single file.  The function receives a null-terminated     *
-;array of char and either verifies that the array can be converted to a 64-bit float or denies that such a conversion is    *
-;possible.  Copyright (C) 2022 Joseph Eggers.                                                                              *
+; Program name: "Float Comparator". This program takes in two float numbers as inputs to determine whether or not they fit the
+; are indea floats. It will then compare the two floats output the largerst float and reutrn then smaller float for the user to
+; use Copyright (C) 2022 Joseph Eggers.
 ;                                                                                                                           *
-;This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public   *
-;License version 3 as published by the Free Software Foundation.  This program is distributed in the hope that it will be   *
-;useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.*
-;See the GNU Lesser General Public License for more details. A copy of the GNU General Public License v3 is available here: *
-;<https:;www.gnu.org/licenses/>.                            *
+;This file is part of the software program "Float Comparator".                                                              *
+; FloatComparator is free software: you can redistribute it and/or modify it under the terms of the GNU General Public      *
+;License version 3 as published by the Free Software Foundation.                                                            *
+; FloatComparator is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied     *
+;warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.     *
+;A copy of the GNU General Public License v3 is available here:  <https:;www.gnu.org/licenses/>.                            *
 ;****************************************************************************************************************************
-;
-;
-;========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1=========2=========3**
+
+;=======1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1=========2=========3**
 ;Author information
 ;  Author name: Joseph Eggers
 ;  Author email: joseph.eggers@csu.fullerton.edu
 ;  Author CWID: 885939488
+;
+;Contributors 
+;  Consutlation was provided by the programmer sapphireGnome (Destiny Bonillas) for terminology, and Flow Control
 ;
 ;Status
 ;  This software is not an application program, but rather it is a single function licensed for use by other applications.
 ;  This function can be embedded within both FOSS programs and in proprietary programs as permitted by the LGPL.
 
 ;Function information
-;  Function name: isfloat
+;  Function name: comparator
 ;  Programming language: X86 assembly in Intel syntax.
 ;  Date development began:  2022-Sep-29
 ;  Date version 1.0 finished: 2022-Mar-03
@@ -51,13 +54,13 @@ extern isFloat
 global comparator
 
 segment .data
+; Output messages used for the program. 
 initiate db "Please enter two float numbers seperated by white space. Press enter after the second input.",10,0
 confirmationNumbers db `These are the numbers were entered \n %1.16f \n %1.16f`,10,0
 invalid db "The number you entered is not valid. Please try again", 10, 0
-larger db "The larger number is %1.16f", 10, 0
-endingMSG db `This assembly modlue will now return execution to the driver \module. \n The small number will be returned to the driver. `, 10, 0
-neg_1: dq 0xFF0000000000000
-
+larger db `\n\The larger number is %1.16f \n`, 10, 0
+endingMSG db `This assembly modlue will now return execution to the driver \module. \n\The smaller number will be returned to the driver. `, 10, 0
+; Inut messages received by the user
 userInput db "%s%s", 0
 
 segment .bss
@@ -90,42 +93,42 @@ push qword 0
 push qword 0
 ; Display the iniate input messages
 mov rax, 0                  ;printf uses no data from xmm registers (expecting strings)
-mov rdi, initiate            ;"Please enter two float numbers seperated by white space. Press enter after the second input"
+mov rdi, initiate           ;"Please enter two float numbers seperated by white space. Press enter after the second input"
 call printf
 pop rax
 
 push qword -1
 ;====== Take 1st float ======
 
-sub rsp, 2048 ; make space for 1 string
-mov rax, 0
-mov rdi, userInput
+sub rsp, 2048 				; make space for 2 strings
+mov rax, 0					;printf uses no data from xmm registers (expecting strings)
+mov rdi, userInput			; input by user in two string format 
 mov rsi, rsp
 mov rdx, rsp
 add rdx, 1024
-call scanf
+call scanf					; scan two strings in
 
 ;====== Check if the input is a valid float ======
 mov rax, 0
-mov rdi, rsp
+mov rdi, rsp				; move the top of teh stack to isFloat function and check 
 call isFloat
 cmp rax, 0
 
-je invalidRoot
+je invalidRoot				; if is function returns a 0 that means it is not a float, jump to invalidRoot 
 mov rax, 0
 mov rdi, rsp
-add rdi, 1024
+add rdi, 1024				 ; move the top of teh stack to isFloat function and check 
 call isFloat
 cmp rax, 0
-je invalidRoot
+je invalidRoot				; if is function returns a 0 that means it is not a float, jump to invalidRoot 
 
 ; if Both Passed then convert to floats
-mov rdi, rsp
+mov rdi, rsp					; put top of the stack into rdi then call atof to turn into flaot 
 call atof
-movsd xmm15, xmm0
+movsd xmm15, xmm0			; sttore result 
 mov rdi, rsp
 add rdi, 1024
-call atof
+call atof					; repeat turn sting into flaot for the second function
 movsd xmm14, xmm0
 pop rax
 
@@ -134,8 +137,8 @@ pop rax
 
 push qword 0
 ; Display the iniate input messages
-mov rax, 2                  ;printf uses no data from xmm registers (expecting strings)
-mov rdi, confirmationNumbers           ;"Please enter two float numbers seperated by white space. Press enter after the second input"
+mov rax, 2                  		; printf uses two flloats for the xmm registers
+mov rdi, confirmationNumbers		;"These are the numbers were entered \n %1.16f \n %1.16f"
 movsd xmm0, xmm15
 movsd xmm1, xmm14
 call printf
@@ -143,13 +146,13 @@ pop rax
 
 ;====== Compare the two floats ======
 
-ucomisd xmm14, xmm15
+ucomisd xmm14, xmm15				; compare the towo floats 
 
-jb inputOneBigger
+jb inputOneBigger					; if xmm15 was bigger jump to inputOneBigger 
 
 movsd xmm9, xmm14
 movsd xmm8, xmm15
-jmp returnBigger
+jmp returnBigger					; then skip to return bigger code block 
 
 inputOneBigger:
 movsd xmm9, xmm15
@@ -159,7 +162,7 @@ returnBigger:
 ;====== Return the bigger number ======= 
 push qword 0
 mov rax, 1
-mov rdi, larger
+mov rdi, larger						; The larger number is %1.16f
 movsd xmm0, xmm9
 call printf
 pop rax;
@@ -167,15 +170,15 @@ pop rax;
 
 jmp end
 
-invalidRoot: 
+invalidRoot: 					; Invalid Code block 
 	push qword 0
 	mov rax, 0
-	mov rdi, invalid
+	mov rdi, invalid			; The number you entered is not valid. Please try again
 	call printf
 	pop rax
 	;==== return -1 ======
-	push qword 0
-	mov rax, -1
+	push qword 0				
+	mov rax, -1					; insert -1 into the return statement
 	cvtsi2sd xmm8, rax
 	pop rax
 	pop rax
@@ -184,12 +187,12 @@ invalidRoot:
 end:
 push qword 0
 mov rax, 0
-mov rdi, endingMSG
+mov rdi, endingMSG				; "This assembly modlue will now return execution to the driver \module. \n The small number will be returned to the driver"
 call printf
 pop rax
 
 pop rax
-movsd xmm0, xmm8
+movsd xmm0, xmm8				; put the smallest number back in for the retun statement
 
 add rsp, 2048
 
